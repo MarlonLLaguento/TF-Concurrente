@@ -2,29 +2,10 @@ package main
 
 import (
 	"fmt"
-	"math"
 	"sort"
 )
 
-const similarityThreshold = 0.5
-const maxRecommendations = 10
-
-func cosineSimilarity(ratings1, ratings2 map[int]float64) float64 {
-	var dotProduct, normA, normB float64
-	for userID, ratingA := range ratings1 {
-		if ratingB, exists := ratings2[userID]; exists {
-			dotProduct += ratingA * ratingB
-			normA += ratingA * ratingA
-			normB += ratingB * ratingB
-		}
-	}
-
-	if normA == 0 || normB == 0 {
-		return 0
-	}
-	return dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
-}
-
+// Función que genera recomendaciones basadas en ítems
 func generateItemBasedRecommendations(targetMovie Movie, allMovies []Movie) []int {
 	type recommendation struct {
 		id         int
@@ -35,19 +16,21 @@ func generateItemBasedRecommendations(targetMovie Movie, allMovies []Movie) []in
 	for _, movie := range allMovies {
 		if movie.ID != targetMovie.ID {
 			similarity := cosineSimilarity(targetMovie.UserRatings, movie.UserRatings)
-			if similarity > similarityThreshold {
+			if similarity > 0.3 { // Umbral de similitud
 				recommendations = append(recommendations, recommendation{movie.ID, similarity})
 			}
 		}
 	}
 
+	// Ordenar recomendaciones por similitud
 	sort.Slice(recommendations, func(i, j int) bool {
 		return recommendations[i].similarity > recommendations[j].similarity
 	})
 
+	// Limitar a las 10 recomendaciones principales
 	topRecommendations := []int{}
 	for i, rec := range recommendations {
-		if i >= maxRecommendations {
+		if i >= 10 {
 			break
 		}
 		topRecommendations = append(topRecommendations, rec.id)
@@ -56,7 +39,8 @@ func generateItemBasedRecommendations(targetMovie Movie, allMovies []Movie) []in
 	return topRecommendations
 }
 
-func startClient(movieID int, allMovies []Movie) {
+// Función que inicia el cliente y devuelve recomendaciones
+func startClient(movieID int, allMovies []Movie) []int {
 	var targetMovie *Movie
 	for _, movie := range allMovies {
 		if movie.ID == movieID {
@@ -67,9 +51,10 @@ func startClient(movieID int, allMovies []Movie) {
 
 	if targetMovie == nil {
 		fmt.Printf("Película con ID %d no encontrada.\n", movieID)
-		return
+		return []int{}
 	}
 
 	recommendations := generateItemBasedRecommendations(*targetMovie, allMovies)
 	fmt.Printf("Recomendaciones para la película %d: %v\n", targetMovie.ID, recommendations)
+	return recommendations
 }
